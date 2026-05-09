@@ -1,0 +1,104 @@
+# Code Agent 项目文档
+
+## 项目概述
+
+Code Agent 是一个基于 RAG（检索增强生成）的代码分析工具，可以对代码仓库建立索引并回答用户关于代码的问题。
+
+## 项目结构
+
+```
+Code Agent/
+├── app.py                 # 主入口，CLI 交互界面
+├── config.py             # API 配置（MiniMax）
+├── requirements.txt       # 项目依赖
+├── CHANGELOG.md          # 修改历史
+├── .env                  # API 密钥（不提交到 GitHub）
+├── .gitignore            # 忽略敏感文件
+├── agent/
+│   ├── ast_parser.py     # 代码解析模块（AST）
+│   ├── rag.py            # RAG 核心（构建索引）
+│   ├── retriever.py      # 检索模块
+│   └── llm.py            # LLM 调用封装
+├── data/
+│   └── repo/             # 测试代码仓库目录
+└── index/                # 向量索引存储目录
+```
+
+## 模块说明
+
+### 1. app.py (主入口)
+- 提供 CLI 交互界面
+- 循环接收用户输入问题
+- 调用 RAG 系统回答问题
+
+### 2. agent/ast_parser.py (代码解析)
+- 使用 Python 内置 `ast` 模块解析代码
+- 提取函数定义信息（函数名、源代码）
+- 依赖：Python 标准库 `ast`
+
+### 3. agent/rag.py (RAG 核心)
+- 遍历代码仓库中的 Python 文件
+- 调用 `extract_functions` 提取函数
+- 使用 OpenAI Embedding 生成向量
+- 使用 FAISS 建立向量索引
+- 依赖：`faiss-cpu`, `numpy`, `openai`
+
+### 4. agent/retriever.py (检索模块)
+- 接收用户查询
+- 生成查询向量
+- 在 FAISS 索引中检索最相似的 k 个结果
+- 依赖：`numpy`
+
+### 5. agent/llm.py (LLM 封装)
+- 调用 OpenAI GPT-4o-mini 生成回答
+- 依赖：`openai`
+
+## 环境要求
+
+- Python 3.11
+- 依赖包（见 requirements.txt）
+
+## 依赖包列表
+
+```
+openai
+faiss-cpu
+tiktoken
+tree_sitter
+tree_sitter_languages
+```
+
+---
+
+## 修改历史 (Changelog)
+
+### 2026-05-02
+
+#### v1.0 - 初始版本
+- 创建项目结构
+- 完成各模块的基础框架
+
+#### 修改记录
+
+| 日期 | 文件 | 修改内容 | 原因 |
+|------|------|----------|------|
+| 2026-05-02 | `agent/ast_parser.py` | 替换 `tree_sitter_languages` 为 Python 内置 `ast` 模块 | `get_language()` 函数参数不兼容，报错 `TypeError: __init__() takes exactly 1 argument (2 given)` |
+| 2026-05-02 | `agent/rag.py`, `agent/llm.py` | 添加 `config.py` 管理 API 配置，使用 `python-dotenv` 读取 `.env` 文件 | 模块加载时缺少 API key，报错 `OpenAIError: The api_key client option must be set` |
+| 2026-05-02 | `app.py` | 移除 emoji 符号，改为 ASCII 字符；改为英文交互 | Windows GBK 编码无法输出 emoji，报错 `UnicodeEncodeError` |
+| 2026-05-02 | `requirements.txt` | 添加 `python-dotenv` 依赖 | 新增配置文件管理 API key |
+| 2026-05-02 | 新增 `config.py` | 配置文件，管理 API key 和模型参数 | 解耦配置，方便维护 |
+| 2026-05-02 | 新增 `.env` | 存储 API key 和模型配置 | 安全存储敏感信息，不会提交到 GitHub |
+| 2026-05-02 | 新增 `.gitignore` | 忽略 `.env`, `__pycache__`, `*.pyc` | 防止敏感信息和缓存文件提交到 GitHub |
+| 2026-05-09 | `config.py` | 替换 OpenAI 为 MiniMax API 配置 | 用户要求使用 MiniMax |
+| 2026-05-09 | `.env` | 替换 OpenAI API 为 MiniMax API Key 和配置 | 用户要求使用 MiniMax |
+| 2026-05-09 | `agent/rag.py` | 使用 `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `EMBEDDING_MODEL` | 适配 MiniMax API |
+| 2026-05-09 | `agent/llm.py` | 使用 `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `LLM_MODEL` | 适配 MiniMax API |
+
+---
+
+## 使用方法
+
+1. 确保 Python 3.11 环境已激活
+2. 安装依赖：`pip install -r requirements.txt`
+3. 放入测试代码到 `data/repo/` 目录
+4. 运行：`python app.py`
