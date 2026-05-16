@@ -1,5 +1,4 @@
 openai
 faiss-cpu
-tiktoken
-tree_sitter
-tree_sitter_languages
+numpy
+python-dotenv

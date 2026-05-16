@@ -1,40 +1,65 @@
 import os
+
 import faiss
 import numpy as np
+
 from agent.ast_parser import extract_functions
-from openai import OpenAI
+from config import EMBEDDING_MODEL, get_openai_client
 
-client = OpenAI()
 
-docs = []
-vectors = []
-
-def embed(text):
+def embed(text: str) -> np.ndarray:
+    client = get_openai_client()
     resp = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
+        model=EMBEDDING_MODEL,
+        input=text,
     )
-    return np.array(resp.data[0].embedding)
+    return np.asarray(resp.data[0].embedding, dtype="float32")
 
-def build_index(repo_path):
-    global docs, vectors
+
+def build_index(repo_path: str):
+    if not os.path.isdir(repo_path):
+        raise FileNotFoundError(
+            f"Repository path does not exist: {repo_path}. "
+            "Put Python files under data/repo or set REPO_PATH in .env."
+        )
+
+    docs = []
+    vectors = []
+    py_files = 0
+    skipped_files = []
 
     for root, _, files in os.walk(repo_path):
-        for f in files:
-            if f.endswith(".py"):
-                path = os.path.join(root, f)
-                code = open(path).read()
+        for filename in files:
+            if not filename.endswith(".py"):
+                continue
 
+            py_files += 1
+            path = os.path.join(root, filename)
+
+            try:
+                with open(path, "r", encoding="utf-8") as file:
+                    code = file.read()
                 funcs = extract_functions(code)
-                for fn in funcs:
-                    text = f"{fn['name']}\n{fn['code']}"
-                    vec = embed(text)
+            except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+                skipped_files.append(f"{path}: {exc}")
+                continue
 
-                    docs.append(text)
-                    vectors.append(vec)
+            for fn in funcs:
+                text = f"{fn['name']}\n{fn['code']}"
+                docs.append(text)
+                vectors.append(embed(text))
 
-    dim = len(vectors[0])
-    index = faiss.IndexFlatL2(dim)
-    index.add(np.array(vectors))
+    if py_files == 0:
+        raise ValueError(f"No Python files found under repository path: {repo_path}")
 
-    return index
+    if not vectors:
+        detail = ""
+        if skipped_files:
+            detail = " Skipped files: " + "; ".join(skipped_files)
+        raise ValueError(f"No Python functions found under repository path: {repo_path}.{detail}")
+
+    matrix = np.vstack(vectors).astype("float32")
+    index = faiss.IndexFlatL2(matrix.shape[1])
+    index.add(matrix)
+
+    return index, docs

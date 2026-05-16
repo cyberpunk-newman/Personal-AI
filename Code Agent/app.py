@@ -1,16 +1,26 @@
+from agent.llm import ask_llm
 from agent.rag import build_index
 from agent.retriever import retrieve
-from agent.llm import ask_llm
+from config import REPO_PATH
 
-print("🔧 Building index...")
-index = build_index("data/repo")
 
-while True:
-    query = input("\n❓ 请输入问题：")
+def main():
+    print(f"Building index from {REPO_PATH}...")
 
-    contexts = retrieve(query, index)
+    try:
+        index, docs = build_index(REPO_PATH)
+    except Exception as exc:
+        print(f"Failed to build index: {exc}")
+        return
 
-    prompt = f"""
+    while True:
+        query = input("\n请输入问题：").strip()
+        if not query:
+            continue
+
+        contexts = retrieve(query, index, docs)
+
+        prompt = f"""
 你是一个代码分析助手，请基于以下代码回答问题：
 
 {contexts}
@@ -19,5 +29,14 @@ while True:
 请解释清楚函数作用和逻辑。
 """
 
-    answer = ask_llm(prompt)
-    print("\n🤖 回答：\n", answer)
+        try:
+            answer = ask_llm(prompt)
+        except Exception as exc:
+            print(f"\n回答失败：{exc}")
+            continue
+
+        print("\n回答：\n", answer)
+
+
+if __name__ == "__main__":
+    main()

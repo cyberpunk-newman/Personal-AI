@@ -1,23 +1,17 @@
-from tree_sitter_languages import get_language, get_parser
+import ast
 
-LANGUAGE = get_language("python")
-parser = get_parser("python")
 
 def extract_functions(code: str):
-    tree = parser.parse(bytes(code, "utf8"))
-    root = tree.root_node
-
+    tree = ast.parse(code)
     functions = []
 
-    def traverse(node):
-        if node.type == "function_definition":
-            name = node.child_by_field_name("name").text.decode()
-            functions.append({
-                "name": name,
-                "code": node.text.decode()
-            })
-        for child in node.children:
-            traverse(child)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            source = ast.get_source_segment(code, node)
+            if source:
+                functions.append({
+                    "name": node.name,
+                    "code": source,
+                })
 
-    traverse(root)
     return functions

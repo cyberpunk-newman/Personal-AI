@@ -9,11 +9,11 @@ Code Agent 是一个基于 RAG（检索增强生成）的代码分析工具，�
 ```
 Code Agent/
 ├── app.py                 # 主入口，CLI 交互界面
-├── config.py             # API 配置（MiniMax）
+├── config.py              # API 配置（OpenAI）
 ├── requirements.txt       # 项目依赖
 ├── CHANGELOG.md          # 修改历史
-├── .env                  # API 密钥（不提交到 GitHub）
-├── .gitignore            # 忽略敏感文件
+├── .env.example          # 环境变量示例
+├── .gitignore            # 忽略敏感文件和本地环境
 ├── agent/
 │   ├── ast_parser.py     # 代码解析模块（AST）
 │   ├── rag.py            # RAG 核心（构建索引）
@@ -41,17 +41,25 @@ Code Agent/
 - 调用 `extract_functions` 提取函数
 - 使用 OpenAI Embedding 生成向量
 - 使用 FAISS 建立向量索引
+- 对缺失目录、空目录、无函数等基础异常给出清晰错误
 - 依赖：`faiss-cpu`, `numpy`, `openai`
 
 ### 4. agent/retriever.py (检索模块)
 - 接收用户查询
 - 生成查询向量
 - 在 FAISS 索引中检索最相似的 k 个结果
+- 显式接收当前索引对应的 docs，避免依赖全局状态
 - 依赖：`numpy`
 
 ### 5. agent/llm.py (LLM 封装)
 - 调用 OpenAI GPT-4o-mini 生成回答
+- 使用 `config.py` 中的 OpenAI 配置
 - 依赖：`openai`
+
+### 6. config.py (配置)
+- 使用 `python-dotenv` 读取本地 `.env`
+- 配置 OpenAI API Key、base URL、Embedding 模型、LLM 模型和待索引仓库路径
+- 未设置 `OPENAI_API_KEY` 时给出清晰错误
 
 ## 环境要求
 
@@ -63,9 +71,8 @@ Code Agent/
 ```
 openai
 faiss-cpu
-tiktoken
-tree_sitter
-tree_sitter_languages
+numpy
+python-dotenv
 ```
 
 ---
@@ -89,10 +96,15 @@ tree_sitter_languages
 | 2026-05-02 | 新增 `config.py` | 配置文件，管理 API key 和模型参数 | 解耦配置，方便维护 |
 | 2026-05-02 | 新增 `.env` | 存储 API key 和模型配置 | 安全存储敏感信息，不会提交到 GitHub |
 | 2026-05-02 | 新增 `.gitignore` | 忽略 `.env`, `__pycache__`, `*.pyc` | 防止敏感信息和缓存文件提交到 GitHub |
-| 2026-05-09 | `config.py` | 替换 OpenAI 为 MiniMax API 配置 | 用户要求使用 MiniMax |
-| 2026-05-09 | `.env` | 替换 OpenAI API 为 MiniMax API Key 和配置 | 用户要求使用 MiniMax |
-| 2026-05-09 | `agent/rag.py` | 使用 `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `EMBEDDING_MODEL` | 适配 MiniMax API |
-| 2026-05-09 | `agent/llm.py` | 使用 `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, `LLM_MODEL` | 适配 MiniMax API |
+| 2026-05-09 | `config.py` | 使用 OpenAI API 配置 | 项目使用 GPT 接口 |
+| 2026-05-09 | `.env` | 使用 OpenAI API Key 和模型配置 | 项目使用 GPT 接口 |
+| 2026-05-09 | `agent/rag.py` | 使用 OpenAI Embedding 接口生成向量 | 适配 OpenAI API |
+| 2026-05-09 | `agent/llm.py` | 使用 OpenAI Chat Completions 接口生成回答 | 适配 OpenAI API |
+| 2026-05-16 | `CHANGELOG.md` | 将 API 说明统一为 OpenAI/GPT 接口 | 当前项目使用 OpenAI GPT 接口 |
+| 2026-05-16 | `config.py`, `.env.example`, `.gitignore` | 补齐 OpenAI 配置读取、环境变量示例和忽略规则 | 修复可运行基线 |
+| 2026-05-16 | `agent/ast_parser.py` | 改为使用 Python 标准库 `ast` 提取函数 | 避免 tree-sitter 兼容问题 |
+| 2026-05-16 | `agent/rag.py`, `agent/retriever.py`, `agent/llm.py`, `app.py` | 修复缺目录、空索引、全局状态和配置硬编码问题 | 提升基础可运行性 |
+| 2026-05-16 | `requirements.txt`, `data/repo/.gitkeep` | 同步依赖并保留默认代码仓库目录 | 修复本地启动前置条件 |
 
 ---
 
@@ -100,5 +112,6 @@ tree_sitter_languages
 
 1. 确保 Python 3.11 环境已激活
 2. 安装依赖：`pip install -r requirements.txt`
-3. 放入测试代码到 `data/repo/` 目录
-4. 运行：`python app.py`
+3. 复制 `.env.example` 为 `.env`，并设置 `OPENAI_API_KEY`
+4. 放入测试代码到 `data/repo/` 目录，或在 `.env` 中设置 `REPO_PATH`
+5. 运行：`python app.py`
