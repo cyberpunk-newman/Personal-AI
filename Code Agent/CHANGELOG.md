@@ -87,30 +87,65 @@ python-dotenv
 
 #### 修改记录
 
-| 日期 | 文件 | 修改内容 | 原因 |
-|------|------|----------|------|
-| 2026-05-02 | `agent/ast_parser.py` | 替换 `tree_sitter_languages` 为 Python 内置 `ast` 模块 | `get_language()` 函数参数不兼容，报错 `TypeError: __init__() takes exactly 1 argument (2 given)` |
-| 2026-05-02 | `agent/rag.py`, `agent/llm.py` | 添加 `config.py` 管理 API 配置，使用 `python-dotenv` 读取 `.env` 文件 | 模块加载时缺少 API key，报错 `OpenAIError: The api_key client option must be set` |
-| 2026-05-02 | `app.py` | 移除 emoji 符号，改为 ASCII 字符；改为英文交互 | Windows GBK 编码无法输出 emoji，报错 `UnicodeEncodeError` |
-| 2026-05-02 | `requirements.txt` | 添加 `python-dotenv` 依赖 | 新增配置文件管理 API key |
-| 2026-05-02 | 新增 `config.py` | 配置文件，管理 API key 和模型参数 | 解耦配置，方便维护 |
-| 2026-05-02 | 新增 `.env` | 存储 API key 和模型配置 | 安全存储敏感信息，不会提交到 GitHub |
-| 2026-05-02 | 新增 `.gitignore` | 忽略 `.env`, `__pycache__`, `*.pyc` | 防止敏感信息和缓存文件提交到 GitHub |
-| 2026-05-09 | `config.py` | 使用 OpenAI API 配置 | 项目使用 GPT 接口 |
-| 2026-05-09 | `.env` | 使用 OpenAI API Key 和模型配置 | 项目使用 GPT 接口 |
-| 2026-05-09 | `agent/rag.py` | 使用 OpenAI Embedding 接口生成向量 | 适配 OpenAI API |
-| 2026-05-09 | `agent/llm.py` | 使用 OpenAI Chat Completions 接口生成回答 | 适配 OpenAI API |
-| 2026-05-16 | `CHANGELOG.md` | 将 API 说明统一为 OpenAI/GPT 接口 | 当前项目使用 OpenAI GPT 接口 |
-| 2026-05-16 | `config.py`, `.env.example`, `.gitignore` | 补齐 OpenAI 配置读取、环境变量示例和忽略规则 | 修复可运行基线 |
-| 2026-05-16 | `agent/ast_parser.py` | 改为使用 Python 标准库 `ast` 提取函数 | 避免 tree-sitter 兼容问题 |
-| 2026-05-16 | `agent/rag.py`, `agent/retriever.py`, `agent/llm.py`, `app.py` | 修复缺目录、空索引、全局状态和配置硬编码问题 | 提升基础可运行性 |
-| 2026-05-16 | `requirements.txt`, `data/repo/.gitkeep` | 同步依赖并保留默认代码仓库目录 | 修复本地启动前置条件 |
-| 2026-05-24 | `config.py` | 忽略空白 `OPENAI_BASE_URL` 环境变量 | 避免 OpenAI SDK 将空字符串当作 base URL 导致连接错误 |
-| 2026-05-24 | `.env` | 本地切换到阿里云百炼兼容接口，使用 `text-embedding-v4` 与 `qwen3.6-flash-2026-04-16` 跑通链路 | 验证国内兼容模型可完成 embedding、检索和 chat 闭环；`.env` 不提交 |
-| 2026-05-24 | `.gitignore` | 忽略 `.venv311/` | 防止 Python 3.11 本地虚拟环境被误提交 |
-| 2026-05-24 | `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py` | 检索结果增加函数名、文件路径、行号、rank 和 score 等 metadata | 支持目标 1 检索命中率评测 |
-| 2026-05-24 | `eval/questions.json`, `eval/run_eval.py`, `eval/results/` | 新增第一版检索评测闭环，包含 2 个样例、Recall@1/Recall@K 计算和结果输出 | 验证问题是否能在 top-k 中命中预期函数 |
-| 2026-05-24 | `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py`, `eval/run_eval.py` | 为核心检索链路和评测函数补充类型注解与中文 docstring | 方便后续重新审视代码职责、数据结构和评测指标含义 |
+### 2026-05-24
+
+#### 批次 1 - 兼容百炼运行链路
+
+| 文件 | 修改内容 | 原因 |
+|------|----------|------|
+| `config.py` | 忽略空白 `OPENAI_BASE_URL` 环境变量 | 避免 OpenAI SDK 将空字符串当作 base URL 导致连接错误 |
+| `.env` | 本地切换到阿里云百炼兼容接口，使用 `text-embedding-v4` 与 `qwen3.6-flash-2026-04-16` 跑通链路 | 验证国内兼容模型可完成 embedding、检索和 chat 闭环；`.env` 不提交 |
+| `.gitignore` | 忽略 `.venv311/` | 防止 Python 3.11 本地虚拟环境被误提交 |
+
+#### 批次 2 - 重大修改：第一版检索评测闭环
+
+| 文件 | 修改内容 | 原因 |
+|------|----------|------|
+| `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py` | 检索结果增加函数名、文件路径、行号、rank 和 score 等 metadata | 支持目标 1 检索命中率评测 |
+| `eval/questions.json`, `eval/run_eval.py`, `eval/results/` | 新增第一版检索评测闭环，包含 2 个样例、Recall@1/Recall@K 计算和结果输出 | 验证问题是否能在 top-k 中命中预期函数 |
+
+#### 批次 3 - 代码可读性补充
+
+| 文件 | 修改内容 | 原因 |
+|------|----------|------|
+| `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py`, `eval/run_eval.py` | 为核心检索链路和评测函数补充类型注解与中文 docstring | 方便后续重新审视代码职责、数据结构和评测指标含义 |
+
+### 2026-05-16
+
+#### 批次 1 - 重大修改：可运行基线修复
+
+| 文件 | 修改内容 | 原因 |
+|------|----------|------|
+| `CHANGELOG.md` | 将 API 说明统一为 OpenAI/GPT 接口 | 当前项目使用 OpenAI GPT 接口 |
+| `config.py`, `.env.example`, `.gitignore` | 补齐 OpenAI 配置读取、环境变量示例和忽略规则 | 修复可运行基线 |
+| `agent/ast_parser.py` | 改为使用 Python 标准库 `ast` 提取函数 | 避免 tree-sitter 兼容问题 |
+| `agent/rag.py`, `agent/retriever.py`, `agent/llm.py`, `app.py` | 修复缺目录、空索引、全局状态和配置硬编码问题 | 提升基础可运行性 |
+| `requirements.txt`, `data/repo/.gitkeep` | 同步依赖并保留默认代码仓库目录 | 修复本地启动前置条件 |
+
+### 2026-05-09
+
+#### 批次 1 - API 配置口径调整
+
+| 文件 | 修改内容 | 原因 |
+|------|----------|------|
+| `config.py` | 使用 OpenAI API 配置 | 项目使用 GPT 接口 |
+| `.env` | 使用 OpenAI API Key 和模型配置 | 项目使用 GPT 接口 |
+| `agent/rag.py` | 使用 OpenAI Embedding 接口生成向量 | 适配 OpenAI API |
+| `agent/llm.py` | 使用 OpenAI Chat Completions 接口生成回答 | 适配 OpenAI API |
+
+### 2026-05-02
+
+#### 批次 1 - 初始配置与兼容性修复
+
+| 文件 | 修改内容 | 原因 |
+|------|----------|------|
+| `agent/ast_parser.py` | 替换 `tree_sitter_languages` 为 Python 内置 `ast` 模块 | `get_language()` 函数参数不兼容，报错 `TypeError: __init__() takes exactly 1 argument (2 given)` |
+| `agent/rag.py`, `agent/llm.py` | 添加 `config.py` 管理 API 配置，使用 `python-dotenv` 读取 `.env` 文件 | 模块加载时缺少 API key，报错 `OpenAIError: The api_key client option must be set` |
+| `app.py` | 移除 emoji 符号，改为 ASCII 字符；改为英文交互 | Windows GBK 编码无法输出 emoji，报错 `UnicodeEncodeError` |
+| `requirements.txt` | 添加 `python-dotenv` 依赖 | 新增配置文件管理 API key |
+| 新增 `config.py` | 配置文件，管理 API key 和模型参数 | 解耦配置，方便维护 |
+| 新增 `.env` | 存储 API key 和模型配置 | 安全存储敏感信息，不会提交到 GitHub |
+| 新增 `.gitignore` | 忽略 `.env`, `__pycache__`, `*.pyc` | 防止敏感信息和缓存文件提交到 GitHub |
 
 ---
 
