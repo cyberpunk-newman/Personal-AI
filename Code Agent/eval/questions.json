@@ -1,0 +1,20 @@
+[
+  {
+    "id": "retrieval_001",
+    "category": "retrieval",
+    "question": "新增 todo 的逻辑在哪里实现？",
+    "expected_functions": ["add_todo"],
+    "expected_files": ["service.py"],
+    "k": 3,
+    "notes": "Should retrieve the TodoService.add_todo implementation that creates and saves a new Todo."
+  },
+  {
+    "id": "retrieval_002",
+    "category": "retrieval",
+    "question": "任务列表是如何保存到文件的？",
+    "expected_functions": ["save"],
+    "expected_files": ["storage.py"],
+    "k": 3,
+    "notes": "Should retrieve TodoStorage.save, which serializes todos and writes JSON to disk."
+  }
+]

@@ -108,6 +108,8 @@ python-dotenv
 | 2026-05-24 | `config.py` | 忽略空白 `OPENAI_BASE_URL` 环境变量 | 避免 OpenAI SDK 将空字符串当作 base URL 导致连接错误 |
 | 2026-05-24 | `.env` | 本地切换到阿里云百炼兼容接口，使用 `text-embedding-v4` 与 `qwen3.6-flash-2026-04-16` 跑通链路 | 验证国内兼容模型可完成 embedding、检索和 chat 闭环；`.env` 不提交 |
 | 2026-05-24 | `.gitignore` | 忽略 `.venv311/` | 防止 Python 3.11 本地虚拟环境被误提交 |
+| 2026-05-24 | `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py` | 检索结果增加函数名、文件路径、行号、rank 和 score 等 metadata | 支持目标 1 检索命中率评测 |
+| 2026-05-24 | `eval/questions.json`, `eval/run_eval.py`, `eval/results/` | 新增第一版检索评测闭环，包含 2 个样例、Recall@1/Recall@K 计算和结果输出 | 验证问题是否能在 top-k 中命中预期函数 |
 
 ---
 

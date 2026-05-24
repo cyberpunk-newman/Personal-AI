@@ -1,0 +1,109 @@
+{
+  "generated_at": "2026-05-24T12:45:28",
+  "repo_path": "data/repo",
+  "summary": {
+    "total_cases": 2,
+    "recall_at_1": 0.0,
+    "recall_at_k": 1.0,
+    "hit_at_1": 0,
+    "hit_at_k": 2,
+    "missed_cases": [],
+    "total_latency_ms": 3541.33
+  },
+  "results": [
+    {
+      "id": "retrieval_001",
+      "category": "retrieval",
+      "question": "新增 todo 的逻辑在哪里实现？",
+      "expected_functions": [
+        "add_todo"
+      ],
+      "expected_files": [
+        "service.py"
+      ],
+      "k": 3,
+      "hit_at_1": false,
+      "hit_at_k": true,
+      "latency_ms": 210.64,
+      "retrieved": [
+        {
+          "rank": 1,
+          "score": 0.784342885017395,
+          "function_name": "print_todos",
+          "file_path": "data/repo/CLI_todo/utils.py",
+          "start_line": 11,
+          "end_line": 19,
+          "matched_expected": false,
+          "code": "def print_todos(todos):\n    if not todos:\n        print(\"暂无任务\")\n        return\n\n    print(\"\\n当前任务列表：\")\n    for todo in todos:\n        status = \"已完成\" if todo.completed else \"未完成\"\n        print(f\"[{status}] {todo.id} | {todo.title} | 创建时间: {todo.created_at}\")"
+        },
+        {
+          "rank": 2,
+          "score": 0.8375835418701172,
+          "function_name": "add_todo",
+          "file_path": "data/repo/CLI_todo/service.py",
+          "start_line": 9,
+          "end_line": 14,
+          "matched_expected": true,
+          "code": "def add_todo(self, title: str):\n        todos = self.storage.load()\n        todo = Todo.create(title)\n        todos.append(todo)\n        self.storage.save(todos)\n        return todo"
+        },
+        {
+          "rank": 3,
+          "score": 0.8659805655479431,
+          "function_name": "__init__",
+          "file_path": "data/repo/CLI_todo/service.py",
+          "start_line": 6,
+          "end_line": 7,
+          "matched_expected": false,
+          "code": "def __init__(self):\n        self.storage = TodoStorage()"
+        }
+      ]
+    },
+    {
+      "id": "retrieval_002",
+      "category": "retrieval",
+      "question": "任务列表是如何保存到文件的？",
+      "expected_functions": [
+        "save"
+      ],
+      "expected_files": [
+        "storage.py"
+      ],
+      "k": 3,
+      "hit_at_1": false,
+      "hit_at_k": true,
+      "latency_ms": 208.83,
+      "retrieved": [
+        {
+          "rank": 1,
+          "score": 0.7391497492790222,
+          "function_name": "print_todos",
+          "file_path": "data/repo/CLI_todo/utils.py",
+          "start_line": 11,
+          "end_line": 19,
+          "matched_expected": false,
+          "code": "def print_todos(todos):\n    if not todos:\n        print(\"暂无任务\")\n        return\n\n    print(\"\\n当前任务列表：\")\n    for todo in todos:\n        status = \"已完成\" if todo.completed else \"未完成\"\n        print(f\"[{status}] {todo.id} | {todo.title} | 创建时间: {todo.created_at}\")"
+        },
+        {
+          "rank": 2,
+          "score": 0.7463971972465515,
+          "function_name": "save",
+          "file_path": "data/repo/CLI_todo/storage.py",
+          "start_line": 20,
+          "end_line": 24,
+          "matched_expected": true,
+          "code": "def save(self, todos):\n        data = [todo.to_dict() for todo in todos]\n\n        with open(self.file_path, \"w\", encoding=\"utf-8\") as f:\n            json.dump(data, f, ensure_ascii=False, indent=2)"
+        },
+        {
+          "rank": 3,
+          "score": 0.7675837278366089,
+          "function_name": "__init__",
+          "file_path": "data/repo/CLI_todo/storage.py",
+          "start_line": 7,
+          "end_line": 12,
+          "matched_expected": false,
+          "code": "def __init__(self, file_path=\"data/todos.json\"):\n        self.file_path = Path(file_path)\n        self.file_path.parent.mkdir(parents=True, exist_ok=True)\n\n        if not self.file_path.exists():\n            self.save([])"
+        }
+      ]
+    }
+  ]
+}

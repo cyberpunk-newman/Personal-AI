@@ -12,6 +12,8 @@ def extract_functions(code: str):
                 functions.append({
                     "name": node.name,
                     "code": source,
+                    "start_line": node.lineno,
+                    "end_line": node.end_lineno,
                 })
 
     return functions

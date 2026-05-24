@@ -46,7 +46,14 @@ def build_index(repo_path: str):
 
             for fn in funcs:
                 text = f"{fn['name']}\n{fn['code']}"
-                docs.append(text)
+                docs.append({
+                    "function_name": fn["name"],
+                    "file_path": path,
+                    "start_line": fn["start_line"],
+                    "end_line": fn["end_line"],
+                    "code": fn["code"],
+                    "text": text,
+                })
                 vectors.append(embed(text))
 
     if py_files == 0:
