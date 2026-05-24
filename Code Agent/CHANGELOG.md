@@ -110,6 +110,7 @@ python-dotenv
 | 2026-05-24 | `.gitignore` | 忽略 `.venv311/` | 防止 Python 3.11 本地虚拟环境被误提交 |
 | 2026-05-24 | `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py` | 检索结果增加函数名、文件路径、行号、rank 和 score 等 metadata | 支持目标 1 检索命中率评测 |
 | 2026-05-24 | `eval/questions.json`, `eval/run_eval.py`, `eval/results/` | 新增第一版检索评测闭环，包含 2 个样例、Recall@1/Recall@K 计算和结果输出 | 验证问题是否能在 top-k 中命中预期函数 |
+| 2026-05-24 | `agent/ast_parser.py`, `agent/rag.py`, `agent/retriever.py`, `eval/run_eval.py` | 为核心检索链路和评测函数补充类型注解与中文 docstring | 方便后续重新审视代码职责、数据结构和评测指标含义 |
 
 ---
 
