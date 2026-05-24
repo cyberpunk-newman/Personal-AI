@@ -10,6 +10,9 @@ except ModuleNotFoundError:
 
 load_dotenv()
 
+if not os.getenv("OPENAI_BASE_URL", "").strip():
+    os.environ.pop("OPENAI_BASE_URL", None)
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL") or None
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")

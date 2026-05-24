@@ -105,6 +105,9 @@ python-dotenv
 | 2026-05-16 | `agent/ast_parser.py` | 改为使用 Python 标准库 `ast` 提取函数 | 避免 tree-sitter 兼容问题 |
 | 2026-05-16 | `agent/rag.py`, `agent/retriever.py`, `agent/llm.py`, `app.py` | 修复缺目录、空索引、全局状态和配置硬编码问题 | 提升基础可运行性 |
 | 2026-05-16 | `requirements.txt`, `data/repo/.gitkeep` | 同步依赖并保留默认代码仓库目录 | 修复本地启动前置条件 |
+| 2026-05-24 | `config.py` | 忽略空白 `OPENAI_BASE_URL` 环境变量 | 避免 OpenAI SDK 将空字符串当作 base URL 导致连接错误 |
+| 2026-05-24 | `.env` | 本地切换到阿里云百炼兼容接口，使用 `text-embedding-v4` 与 `qwen3.6-flash-2026-04-16` 跑通链路 | 验证国内兼容模型可完成 embedding、检索和 chat 闭环；`.env` 不提交 |
+| 2026-05-24 | `.gitignore` | 忽略 `.venv311/` | 防止 Python 3.11 本地虚拟环境被误提交 |
 
 ---
 
