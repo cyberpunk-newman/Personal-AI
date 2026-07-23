@@ -40,9 +40,9 @@ Phase 开发
 
 ## Phase 1：代码重构和模块解耦
 
-- 状态：Todo
+- 状态：Done
 - 分支：`phase1-refactor`
-- Codex Chat：待创建
+- Codex Chat：Phase 1 专用 Chat
 - 前置条件：无
 
 ### 目标
@@ -76,22 +76,25 @@ Code Agent/
 
 ### 验收标准
 
-- [ ] `main.py` 只负责流程入口和交互。
-- [ ] RAG、Embedding、FAISS Vector Store 和 Retriever 职责独立。
-- [ ] AST Parser 独立。
-- [ ] LLM 配置和调用独立。
-- [ ] 当前“检索代码并由 LLM 回答”的功能保持不变。
-- [ ] 原有评测入口适配新模块结构。
-- [ ] Code Review 通过。
-- [ ] Test 验证通过。
+- [x] `main.py` 只负责流程入口和交互。
+- [x] RAG、Embedding、FAISS Vector Store 和 Retriever 职责独立。
+- [x] AST Parser 独立。
+- [x] LLM 配置和调用独立。
+- [x] 当前“检索代码并由 LLM 回答”的功能保持不变。
+- [x] 原有评测入口适配新模块结构。
+- [x] Code Review 通过。
+- [x] Test 验证通过。
 
 ### 测试结果
 
-待执行。
+- 单元与 Mock 集成测试：17 项通过，0 项失败。
+- 依赖检查：`pip check` 通过。
+- 编译检查：核心模块、兼容模块、评测入口和程序入口通过。
+- 真实外部 API 链路：未执行；当前环境未提供可用于验证的 API 配置和固定样例仓库。
 
 ### Commits
 
-待提交。
+- `166c9fe` `refactor(code-agent): separate analysis modules`
 ---
 
 ## Phase 2：引入 Agent Workflow
