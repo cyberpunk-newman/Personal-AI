@@ -8,55 +8,53 @@ Code Agent 是一个基于 RAG（检索增强生成）的代码分析工具，�
 
 ```
 Code Agent/
-├── app.py                 # 主入口，CLI 交互界面
-├── config.py              # API 配置（OpenAI）
+├── main.py                # 主入口，CLI 交互界面
+├── app.py                 # 旧入口兼容层
+├── config.py              # 旧配置导入兼容层
 ├── requirements.txt       # 项目依赖
 ├── CHANGELOG.md          # 修改历史
 ├── .env.example          # 环境变量示例
 ├── .gitignore            # 忽略敏感文件和本地环境
-├── agent/
-│   ├── ast_parser.py     # 代码解析模块（AST）
-│   ├── rag.py            # RAG 核心（构建索引）
-│   ├── retriever.py      # 检索模块
-│   └── llm.py            # LLM 调用封装
+├── core/                 # 配置与 LLM 调用
+├── parser/               # AST 代码解析
+├── rag/                  # Embedding、FAISS 与检索
+├── workflow/             # 代码分析流程
+├── agent/                # 旧模块导入兼容层
+├── tests/                # 自动化测试
+├── eval/                 # 检索评测入口与结果
 ├── data/
 │   └── repo/             # 测试代码仓库目录
-└── index/                # 向量索引存储目录
 ```
 
 ## 模块说明
 
-### 1. app.py (主入口)
+### 1. main.py（主入口）
 - 提供 CLI 交互界面
 - 循环接收用户输入问题
-- 调用 RAG 系统回答问题
+- 调用分析流程回答问题
 
-### 2. agent/ast_parser.py (代码解析)
+### 2. parser/ast_parser.py（代码解析）
 - 使用 Python 内置 `ast` 模块解析代码
 - 提取函数定义信息（函数名、源代码）
 - 依赖：Python 标准库 `ast`
 
-### 3. agent/rag.py (RAG 核心)
-- 遍历代码仓库中的 Python 文件
-- 调用 `extract_functions` 提取函数
-- 使用 OpenAI Embedding 生成向量
-- 使用 FAISS 建立向量索引
-- 对缺失目录、空目录、无函数等基础异常给出清晰错误
+### 3. rag/（RAG 组件）
+- `embedding.py` 封装 OpenAI Embedding
+- `vector_store.py` 管理 FAISS 索引与搜索
+- `retriever.py` 负责查询检索和结果 metadata
 - 依赖：`faiss-cpu`, `numpy`, `openai`
 
-### 4. agent/retriever.py (检索模块)
-- 接收用户查询
-- 生成查询向量
-- 在 FAISS 索引中检索最相似的 k 个结果
-- 显式接收当前索引对应的 docs，避免依赖全局状态
-- 依赖：`numpy`
+### 4. workflow/analyzer.py（分析流程）
+- 遍历代码仓库并组织函数级文档
+- 协调 AST、Embedding、向量库、Retriever 与 LLM
+- 对缺失目录、空目录、无函数等基础异常给出清晰错误
 
-### 5. agent/llm.py (LLM 封装)
+### 5. core/llm.py（LLM 封装）
 - 调用 OpenAI GPT-4o-mini 生成回答
-- 使用 `config.py` 中的 OpenAI 配置
+- 使用 `core/config.py` 中的 OpenAI 配置
 - 依赖：`openai`
 
-### 6. config.py (配置)
+### 6. core/config.py（配置）
 - 使用 `python-dotenv` 读取本地 `.env`
 - 配置 OpenAI API Key、base URL、Embedding 模型、LLM 模型和待索引仓库路径
 - 未设置 `OPENAI_API_KEY` 时给出清晰错误
@@ -155,4 +153,4 @@ python-dotenv
 2. 安装依赖：`pip install -r requirements.txt`
 3. 复制 `.env.example` 为 `.env`，并设置 `OPENAI_API_KEY`
 4. 放入测试代码到 `data/repo/` 目录，或在 `.env` 中设置 `REPO_PATH`
-5. 运行：`python app.py`
+5. 运行：`python main.py`（旧命令 `python app.py` 仍兼容）

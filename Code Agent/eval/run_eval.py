@@ -9,9 +9,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from agent.rag import build_index
-from agent.retriever import retrieve
-from config import REPO_PATH
+from core.config import REPO_PATH
+from rag.retriever import retrieve
+from workflow.analyzer import build_index
 
 QUESTIONS_PATH = PROJECT_ROOT / "eval" / "questions.json"
 RESULTS_DIR = PROJECT_ROOT / "eval" / "results"
