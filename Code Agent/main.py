@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
 from core.config import REPO_PATH
-from workflow.analyzer import analyze_question, build_index
+from workflow.analyzer import build_index
+from workflow.orchestrator import run_workflow
 
 
 def main(
@@ -22,12 +23,13 @@ def main(
         query = input_fn("\n请输入问题：").strip()
         if not query:
             continue
-        try:
-            answer = analyze_question(query, index, docs)
-        except Exception as exc:
-            output_fn(f"\n回答失败：{exc}")
+        result = run_workflow(query, index, docs)
+        if result.error is not None:
+            output_fn(
+                f"\n回答失败（步骤：{result.error.step}）：{result.error.message}"
+            )
             continue
-        output_fn("\n回答：\n", answer)
+        output_fn("\n回答：\n", result.answer)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from parser.ast_parser import extract_functions
 from rag.embedding import embed
 from rag.retriever import retrieve
 from rag.vector_store import create_vector_store
+from workflow.prompt_builder import build_prompt
 
 
 def build_index(
@@ -66,18 +67,6 @@ def build_index(
     return create_vector_store(vectors), docs
 
 
-def build_prompt(query: str, contexts: list[dict[str, Any]]) -> str:
-    """Build the same code-analysis prompt used by the baseline application."""
-    return f"""
-你是一个代码分析助手，请基于以下代码回答问题：
-
-{contexts}
-
-问题：{query}
-请解释清楚函数作用和逻辑。
-"""
-
-
 def analyze_question(
     query: str,
     index: Any,
@@ -86,6 +75,19 @@ def analyze_question(
     retrieve_fn: Callable[..., list[dict[str, Any]]] = retrieve,
     llm_fn: Callable[[str], str] = ask_llm,
 ) -> str:
-    """Retrieve relevant code and ask the LLM to answer the question."""
-    contexts = retrieve_fn(query, index, docs)
-    return llm_fn(build_prompt(query, contexts))
+    """Run analysis through the workflow while preserving the legacy API."""
+    from workflow.orchestrator import WorkflowExecutionError, run_workflow
+
+    def legacy_retrieve(query, store, metadata, *, k):
+        return retrieve_fn(query, store, metadata)
+
+    result = run_workflow(
+        query,
+        index,
+        docs,
+        retrieve_fn=legacy_retrieve,
+        llm_fn=llm_fn,
+    )
+    if result.error is not None:
+        raise WorkflowExecutionError(result.error)
+    return result.answer or ""

@@ -19,6 +19,13 @@ class CompatibilityTests(unittest.TestCase):
 
         self.assertTrue(callable(main))
 
+    def test_main_uses_workflow_without_direct_retriever_or_llm_dependencies(self):
+        import main
+
+        self.assertTrue(callable(main.run_workflow))
+        self.assertFalse(hasattr(main, "retrieve"))
+        self.assertFalse(hasattr(main, "ask_llm"))
+
 
 if __name__ == "__main__":
     unittest.main()
