@@ -99,9 +99,9 @@ Code Agent/
 
 ## Phase 2：引入 Agent Workflow
 
-- 状态：Todo
+- 状态：Done
 - 分支：`phase2-workflow`
-- Codex Chat：待创建
+- Codex Chat：Phase 2 专用 Chat
 - 前置条件：Phase 1 已完成并合并到 `master`
 
 ### 目标
@@ -123,20 +123,24 @@ User Question
 
 ### 验收标准
 
-- [ ] 代码中存在明确的 Workflow 入口。
-- [ ] `main.py` 不直接调用 Retriever 或 LLM。
-- [ ] Workflow 各步骤输入、输出和错误可以追踪。
-- [ ] 当前代码分析能力保持兼容。
-- [ ] Code Review 通过。
-- [ ] Test 验证通过。
+- [x] 代码中存在明确的 Workflow 入口。
+- [x] `main.py` 不直接调用 Retriever 或 LLM。
+- [x] Workflow 各步骤输入、输出和错误可以追踪。
+- [x] 当前代码分析能力保持兼容。
+- [x] Code Review 通过。
+- [x] Test 验证通过。
 
 ### 测试结果
 
-待执行。
+- 单元与 Mock 集成测试：24 项通过，0 项失败。
+- 依赖检查：`pip check` 通过。
+- 编译检查：核心模块、兼容模块、评测入口、测试和程序入口通过。
+- 格式检查：`git diff --check` 通过。
+- 真实外部 API 链路：未执行；核心自动化测试使用 Mock，不依赖外部 API。
 
 ### Commits
 
-待提交。
+- `7d0ec33` `feat(code-agent): add analysis workflow orchestrator`
 
 ---
 
