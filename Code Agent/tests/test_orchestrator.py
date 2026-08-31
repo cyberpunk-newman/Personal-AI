@@ -39,12 +39,16 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(calls, ["retrieve", "analyze", "llm"])
         self.assertEqual(
             [step.name for step in result.context.steps],
-            ["retrieve", "analyze", "llm"],
+            ["plan", "retrieve", "analyze", "llm"],
         )
         self.assertTrue(
             all(step.status is StepStatus.SUCCEEDED for step in result.context.steps)
         )
-        self.assertEqual(result.context.steps[0].output["context_count"], 1)
+        self.assertEqual(result.context.steps[1].output["context_count"], 1)
+        self.assertEqual(
+            [step.input["task"]["id"] for step in result.context.steps[1:]],
+            ["task_1", "task_2", "task_3"],
+        )
 
     def test_empty_question_is_rejected_before_dependencies_run(self):
         def unexpected(*args, **kwargs):
@@ -83,7 +87,26 @@ class OrchestratorTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.answer, "no matching code")
         self.assertEqual(captured["contexts"], [])
-        self.assertEqual(result.context.steps[0].output["context_count"], 0)
+        self.assertEqual(result.context.steps[1].output["context_count"], 0)
+
+    def test_invalid_planner_output_is_rejected_before_execution(self):
+        def unexpected(*args, **kwargs):
+            self.fail("execution dependency must not run for an invalid plan")
+
+        result = run_workflow(
+            "question",
+            object(),
+            [],
+            planner_fn=lambda query: {"goal": query, "tasks": []},
+            retrieve_fn=unexpected,
+            analyzer_fn=unexpected,
+            llm_fn=unexpected,
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.step, "plan")
+        self.assertEqual(result.error.error_type, "ValueError")
+        self.assertEqual([step.name for step in result.context.steps], ["plan"])
 
     def test_retrieval_failure_is_returned_with_step_details(self):
         def fail_retrieval(*args, **kwargs):
@@ -99,8 +122,9 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result.error.step, "retrieve")
         self.assertEqual(result.error.error_type, "RuntimeError")
         self.assertEqual(result.error.message, "index unavailable")
-        self.assertEqual(len(result.context.steps), 1)
-        self.assertEqual(result.context.steps[0].status, StepStatus.FAILED)
+        self.assertEqual(len(result.context.steps), 2)
+        self.assertEqual(result.context.steps[0].status, StepStatus.SUCCEEDED)
+        self.assertEqual(result.context.steps[1].status, StepStatus.FAILED)
 
     def test_analyzer_failure_preserves_retrieval_trace(self):
         def fail_analysis(query, contexts):
@@ -120,7 +144,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result.error.error_type, "ValueError")
         self.assertEqual(
             [step.status for step in result.context.steps],
-            [StepStatus.SUCCEEDED, StepStatus.FAILED],
+            [StepStatus.SUCCEEDED, StepStatus.SUCCEEDED, StepStatus.FAILED],
         )
 
     def test_llm_failure_preserves_completed_step_trace(self):
@@ -140,7 +164,12 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result.error.step, "llm")
         self.assertEqual(
             [step.status for step in result.context.steps],
-            [StepStatus.SUCCEEDED, StepStatus.SUCCEEDED, StepStatus.FAILED],
+            [
+                StepStatus.SUCCEEDED,
+                StepStatus.SUCCEEDED,
+                StepStatus.SUCCEEDED,
+                StepStatus.FAILED,
+            ],
         )
 
 

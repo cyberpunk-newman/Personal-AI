@@ -1,1 +1,1 @@
-"""Automated tests for the Phase 1 module baseline."""
+"""Automated tests for the Code Agent workflow."""

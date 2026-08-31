@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from agents.planner import TaskPlan, TaskType, plan_question, validate_task_plan
 from core.llm import ask_llm
 from rag.retriever import retrieve
 from workflow.prompt_builder import build_prompt
@@ -43,6 +44,7 @@ class WorkflowContext:
     index: Any
     docs: list[dict[str, Any]]
     k: int = 3
+    plan: TaskPlan | None = None
     steps: list[WorkflowStep] = field(default_factory=list)
 
 
@@ -77,10 +79,12 @@ class Orchestrator:
         retrieve_fn: Callable[..., list[dict[str, Any]]] = retrieve,
         analyzer_fn: Callable[[str, list[dict[str, Any]]], str] = build_prompt,
         llm_fn: Callable[[str], str] = ask_llm,
+        planner_fn: Callable[[str], TaskPlan] = plan_question,
     ) -> None:
         self._retrieve = retrieve_fn
         self._analyze = analyzer_fn
         self._ask_llm = llm_fn
+        self._plan = planner_fn
 
     def run(
         self,
@@ -112,70 +116,105 @@ class Orchestrator:
             return result
 
         try:
-            contexts = self._retrieve(context.query, index, docs, k=k)
+            context.plan = validate_task_plan(self._plan(context.query))
         except Exception as exc:
             return self._fail(
                 result,
-                step="retrieve",
-                step_input={
+                step="plan",
+                step_input={"query": context.query},
+                exc=exc,
+            )
+
+        context.steps.append(
+            WorkflowStep(
+                name="plan",
+                input={"query": context.query},
+                status=StepStatus.SUCCEEDED,
+                output={"plan": context.plan.to_dict()},
+            )
+        )
+
+        prompt = ""
+        for task in context.plan.tasks:
+            task_input = {"task": task.to_dict()}
+
+            if task.type is TaskType.CODE_SEARCH:
+                step_input = {
+                    **task_input,
                     "query": context.query,
                     "document_count": len(docs),
                     "k": k,
-                },
-                exc=exc,
-            )
+                }
+                try:
+                    result.contexts = self._retrieve(
+                        context.query,
+                        index,
+                        docs,
+                        k=k,
+                    )
+                except Exception as exc:
+                    return self._fail(
+                        result,
+                        step="retrieve",
+                        step_input=step_input,
+                        exc=exc,
+                    )
+                context.steps.append(
+                    WorkflowStep(
+                        name="retrieve",
+                        input=step_input,
+                        status=StepStatus.SUCCEEDED,
+                        output={
+                            "contexts": result.contexts,
+                            "context_count": len(result.contexts),
+                        },
+                    )
+                )
 
-        result.contexts = contexts
-        context.steps.append(
-            WorkflowStep(
-                name="retrieve",
-                input={
+            elif task.type is TaskType.CODE_ANALYSIS:
+                step_input = {
+                    **task_input,
                     "query": context.query,
-                    "document_count": len(docs),
-                    "k": k,
-                },
-                status=StepStatus.SUCCEEDED,
-                output={"contexts": contexts, "context_count": len(contexts)},
-            )
-        )
+                    "contexts": result.contexts,
+                }
+                try:
+                    prompt = self._analyze(context.query, result.contexts)
+                except Exception as exc:
+                    return self._fail(
+                        result,
+                        step="analyze",
+                        step_input=step_input,
+                        exc=exc,
+                    )
+                context.steps.append(
+                    WorkflowStep(
+                        name="analyze",
+                        input=step_input,
+                        status=StepStatus.SUCCEEDED,
+                        output={"prompt": prompt},
+                    )
+                )
 
-        try:
-            prompt = self._analyze(context.query, contexts)
-        except Exception as exc:
-            return self._fail(
-                result,
-                step="analyze",
-                step_input={"query": context.query, "contexts": contexts},
-                exc=exc,
-            )
+            elif task.type is TaskType.ANSWER_GENERATION:
+                step_input = {**task_input, "prompt": prompt}
+                try:
+                    result.answer = self._ask_llm(prompt)
+                except Exception as exc:
+                    return self._fail(
+                        result,
+                        step="llm",
+                        step_input=step_input,
+                        exc=exc,
+                    )
+                context.steps.append(
+                    WorkflowStep(
+                        name="llm",
+                        input=step_input,
+                        status=StepStatus.SUCCEEDED,
+                        output={"answer": result.answer},
+                    )
+                )
 
-        context.steps.append(
-            WorkflowStep(
-                name="analyze",
-                input={"query": context.query, "contexts": contexts},
-                status=StepStatus.SUCCEEDED,
-                output={"prompt": prompt},
-            )
-        )
-
-        try:
-            result.answer = self._ask_llm(prompt)
-        except Exception as exc:
-            return self._fail(
-                result,
-                step="llm",
-                step_input={"prompt": prompt},
-                exc=exc,
-            )
-
-        context.steps.append(
-            WorkflowStep(
-                name="llm",
-                input={"prompt": prompt},
-                status=StepStatus.SUCCEEDED,
-                output={"answer": result.answer},
-            )
-        )
         return result
 
     @staticmethod
@@ -212,10 +251,12 @@ def run_workflow(
     retrieve_fn: Callable[..., list[dict[str, Any]]] = retrieve,
     analyzer_fn: Callable[[str, list[dict[str, Any]]], str] = build_prompt,
     llm_fn: Callable[[str], str] = ask_llm,
+    planner_fn: Callable[[str], TaskPlan] = plan_question,
 ) -> AnalysisResult:
     """Public workflow entry point for all code-analysis questions."""
     return Orchestrator(
         retrieve_fn=retrieve_fn,
         analyzer_fn=analyzer_fn,
         llm_fn=llm_fn,
+        planner_fn=planner_fn,
     ).run(query, index, docs, k=k)
