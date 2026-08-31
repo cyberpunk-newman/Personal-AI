@@ -13,10 +13,14 @@ class PlannerTests(unittest.TestCase):
             [
                 TaskType.CODE_SEARCH,
                 TaskType.CODE_ANALYSIS,
+                TaskType.DEPENDENCY_ANALYSIS,
                 TaskType.ANSWER_GENERATION,
             ],
         )
-        self.assertEqual([task.id for task in plan.tasks], ["task_1", "task_2", "task_3"])
+        self.assertEqual(
+            [task.id for task in plan.tasks],
+            ["task_1", "task_2", "task_3", "task_4"],
+        )
         self.assertEqual(
             set(plan.to_dict()),
             {"goal", "tasks"},
@@ -39,7 +43,7 @@ class PlannerTests(unittest.TestCase):
 
     def test_unknown_task_type_is_rejected(self):
         data = Planner().plan("question").to_dict()
-        data["tasks"][0]["type"] = "dependency_analysis"
+        data["tasks"][0]["type"] = "unsupported_analysis"
 
         with self.assertRaisesRegex(ValueError, "Unsupported task type"):
             TaskPlan.from_dict(data)

@@ -4,10 +4,11 @@ from typing import Any
 
 
 class TaskType(str, Enum):
-    """Task types supported by the Phase 3 analysis workflow."""
+    """Task types supported by the analysis workflow."""
 
     CODE_SEARCH = "code_search"
     CODE_ANALYSIS = "code_analysis"
+    DEPENDENCY_ANALYSIS = "dependency_analysis"
     ANSWER_GENERATION = "answer_generation"
 
 
@@ -73,13 +74,14 @@ class TaskPlan:
         expected_types = [
             TaskType.CODE_SEARCH,
             TaskType.CODE_ANALYSIS,
+            TaskType.DEPENDENCY_ANALYSIS,
             TaskType.ANSWER_GENERATION,
         ]
         actual_types = [task.type for task in self.tasks]
         if actual_types != expected_types:
             raise ValueError(
                 "Plan tasks must follow code_search, code_analysis, "
-                "answer_generation order."
+                "dependency_analysis, answer_generation order."
             )
 
     @classmethod
@@ -133,6 +135,11 @@ class Planner:
                 ),
                 PlanTask(
                     id="task_3",
+                    type=TaskType.DEPENDENCY_ANALYSIS,
+                    description=f"Analyze code dependencies for: {goal}",
+                ),
+                PlanTask(
+                    id="task_4",
                     type=TaskType.ANSWER_GENERATION,
                     description=f"Generate the final answer for: {goal}",
                 ),

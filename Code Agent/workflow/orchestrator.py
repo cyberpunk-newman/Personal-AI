@@ -6,6 +6,7 @@ from typing import Any
 from agents.planner import TaskPlan, TaskType, plan_question, validate_task_plan
 from core.llm import ask_llm
 from rag.retriever import retrieve
+from tools import ToolRegistry, ToolRequest, ToolResult, create_default_registry
 from workflow.prompt_builder import build_prompt
 
 
@@ -23,6 +24,7 @@ class WorkflowError:
     step: str
     error_type: str
     message: str
+    tool: str | None = None
 
 
 @dataclass
@@ -46,6 +48,7 @@ class WorkflowContext:
     k: int = 3
     plan: TaskPlan | None = None
     steps: list[WorkflowStep] = field(default_factory=list)
+    tool_results: list[ToolResult] = field(default_factory=list)
 
 
 @dataclass
@@ -80,11 +83,12 @@ class Orchestrator:
         analyzer_fn: Callable[[str, list[dict[str, Any]]], str] = build_prompt,
         llm_fn: Callable[[str], str] = ask_llm,
         planner_fn: Callable[[str], TaskPlan] = plan_question,
+        tool_registry: ToolRegistry | None = None,
     ) -> None:
-        self._retrieve = retrieve_fn
         self._analyze = analyzer_fn
         self._ask_llm = llm_fn
         self._plan = planner_fn
+        self._tools = tool_registry or create_default_registry(retrieve_fn)
 
     def run(
         self,
@@ -145,20 +149,21 @@ class Orchestrator:
                     "document_count": len(docs),
                     "k": k,
                 }
-                try:
-                    result.contexts = self._retrieve(
-                        context.query,
-                        index,
-                        docs,
-                        k=k,
-                    )
-                except Exception as exc:
-                    return self._fail(
+                tool_result = self._tools.execute(ToolRequest(
+                    task_id=task.id,
+                    task_type=task.type.value,
+                    query=context.query,
+                    payload={"index": index, "docs": docs, "k": k},
+                ))
+                context.tool_results.append(tool_result)
+                if not tool_result.success:
+                    return self._fail_tool(
                         result,
                         step="retrieve",
                         step_input=step_input,
-                        exc=exc,
+                        tool_result=tool_result,
                     )
+                result.contexts = tool_result.output["contexts"]
                 context.steps.append(
                     WorkflowStep(
                         name="retrieve",
@@ -167,6 +172,7 @@ class Orchestrator:
                         output={
                             "contexts": result.contexts,
                             "context_count": len(result.contexts),
+                            "tool_result": tool_result.to_dict(),
                         },
                     )
                 )
@@ -177,6 +183,20 @@ class Orchestrator:
                     "query": context.query,
                     "contexts": result.contexts,
                 }
+                tool_result = self._tools.execute(ToolRequest(
+                    task_id=task.id,
+                    task_type=task.type.value,
+                    query=context.query,
+                    payload={"contexts": result.contexts},
+                ))
+                context.tool_results.append(tool_result)
+                if not tool_result.success:
+                    return self._fail_tool(
+                        result,
+                        step="analyze",
+                        step_input=step_input,
+                        tool_result=tool_result,
+                    )
                 try:
                     prompt = self._analyze(context.query, result.contexts)
                 except Exception as exc:
@@ -191,7 +211,38 @@ class Orchestrator:
                         name="analyze",
                         input=step_input,
                         status=StepStatus.SUCCEEDED,
-                        output={"prompt": prompt},
+                        output={
+                            "prompt": prompt,
+                            "tool_result": tool_result.to_dict(),
+                        },
+                    )
+                )
+
+            elif task.type is TaskType.DEPENDENCY_ANALYSIS:
+                step_input = {
+                    **task_input,
+                    "contexts": result.contexts,
+                }
+                tool_result = self._tools.execute(ToolRequest(
+                    task_id=task.id,
+                    task_type=task.type.value,
+                    query=context.query,
+                    payload={"contexts": result.contexts},
+                ))
+                context.tool_results.append(tool_result)
+                if not tool_result.success:
+                    return self._fail_tool(
+                        result,
+                        step="dependency",
+                        step_input=step_input,
+                        tool_result=tool_result,
+                    )
+                context.steps.append(
+                    WorkflowStep(
+                        name="dependency",
+                        input=step_input,
+                        status=StepStatus.SUCCEEDED,
+                        output={"tool_result": tool_result.to_dict()},
                     )
                 )
 
@@ -215,6 +266,34 @@ class Orchestrator:
                     )
                 )
 
+        return result
+
+    @staticmethod
+    def _fail_tool(
+        result: AnalysisResult,
+        *,
+        step: str,
+        step_input: dict[str, Any],
+        tool_result: ToolResult,
+    ) -> AnalysisResult:
+        if tool_result.error is None:
+            raise ValueError("Failed tool result is missing error details.")
+        error = WorkflowError(
+            step=step,
+            error_type=tool_result.error.error_type,
+            message=tool_result.error.message,
+            tool=tool_result.tool,
+        )
+        result.context.steps.append(
+            WorkflowStep(
+                name=step,
+                input=step_input,
+                status=StepStatus.FAILED,
+                output={"tool_result": tool_result.to_dict()},
+                error=error,
+            )
+        )
+        result.error = error
         return result
 
     @staticmethod
@@ -252,6 +331,7 @@ def run_workflow(
     analyzer_fn: Callable[[str, list[dict[str, Any]]], str] = build_prompt,
     llm_fn: Callable[[str], str] = ask_llm,
     planner_fn: Callable[[str], TaskPlan] = plan_question,
+    tool_registry: ToolRegistry | None = None,
 ) -> AnalysisResult:
     """Public workflow entry point for all code-analysis questions."""
     return Orchestrator(
@@ -259,4 +339,5 @@ def run_workflow(
         analyzer_fn=analyzer_fn,
         llm_fn=llm_fn,
         planner_fn=planner_fn,
+        tool_registry=tool_registry,
     ).run(query, index, docs, k=k)

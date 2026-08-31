@@ -1,6 +1,8 @@
 import unittest
 
-from parser.ast_parser import extract_functions
+import ast
+
+from parser.ast_parser import extract_functions, get_expression_name
 
 
 class ExtractFunctionsTests(unittest.TestCase):
@@ -19,6 +21,11 @@ class ExtractFunctionsTests(unittest.TestCase):
     def test_invalid_source_raises_syntax_error(self):
         with self.assertRaises(SyntaxError):
             extract_functions("def broken(")
+
+    def test_expression_name_supports_dotted_attributes(self):
+        expression = ast.parse("client.chat.create()", mode="eval").body
+
+        self.assertEqual(get_expression_name(expression.func), "client.chat.create")
 
 
 if __name__ == "__main__":

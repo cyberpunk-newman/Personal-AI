@@ -2,6 +2,16 @@ import ast
 from typing import Any
 
 
+def get_expression_name(node: ast.AST) -> str:
+    """Return a dotted name for a name or attribute AST expression."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        prefix = get_expression_name(node.value)
+        return f"{prefix}.{node.attr}" if prefix else node.attr
+    return ""
+
+
 def extract_functions(code: str) -> list[dict[str, Any]]:
     """Extract regular and async functions from Python source code."""
     tree = ast.parse(code)

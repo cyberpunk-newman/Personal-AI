@@ -1,6 +1,23 @@
 import unittest
 
+from tools.base import BaseTool
+from tools.registry import ToolRegistry
 from workflow.orchestrator import Orchestrator, StepStatus, run_workflow
+
+
+class RecordingTool(BaseTool):
+    def __init__(self, name, task_type, calls, output=None, error=None):
+        self.name = name
+        self.task_types = (task_type,)
+        self.calls = calls
+        self.output = output or {}
+        self.error = error
+
+    def execute(self, request):
+        self.calls.append((self.name, request.task_type))
+        if self.error:
+            raise self.error
+        return self.output
 
 
 class OrchestratorTests(unittest.TestCase):
@@ -39,7 +56,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(calls, ["retrieve", "analyze", "llm"])
         self.assertEqual(
             [step.name for step in result.context.steps],
-            ["plan", "retrieve", "analyze", "llm"],
+            ["plan", "retrieve", "analyze", "dependency", "llm"],
         )
         self.assertTrue(
             all(step.status is StepStatus.SUCCEEDED for step in result.context.steps)
@@ -47,7 +64,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result.context.steps[1].output["context_count"], 1)
         self.assertEqual(
             [step.input["task"]["id"] for step in result.context.steps[1:]],
-            ["task_1", "task_2", "task_3"],
+            ["task_1", "task_2", "task_3", "task_4"],
         )
 
     def test_empty_question_is_rejected_before_dependencies_run(self):
@@ -168,8 +185,80 @@ class OrchestratorTests(unittest.TestCase):
                 StepStatus.SUCCEEDED,
                 StepStatus.SUCCEEDED,
                 StepStatus.SUCCEEDED,
+                StepStatus.SUCCEEDED,
                 StepStatus.FAILED,
             ],
+        )
+
+    def test_selects_registered_tools_from_planner_task_types(self):
+        calls = []
+        registry = ToolRegistry()
+        registry.register(RecordingTool(
+            "search_stub",
+            "code_search",
+            calls,
+            {"contexts": [], "context_count": 0},
+        ))
+        registry.register(RecordingTool(
+            "ast_stub",
+            "code_analysis",
+            calls,
+            {"analyses": [], "analysis_count": 0},
+        ))
+        registry.register(RecordingTool(
+            "dependency_stub",
+            "dependency_analysis",
+            calls,
+            {"dependencies": [], "dependency_count": 0},
+        ))
+
+        result = run_workflow(
+            "question",
+            object(),
+            [],
+            analyzer_fn=lambda query, contexts: "prompt",
+            llm_fn=lambda prompt: "answer",
+            tool_registry=registry,
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(
+            calls,
+            [
+                ("search_stub", "code_search"),
+                ("ast_stub", "code_analysis"),
+                ("dependency_stub", "dependency_analysis"),
+            ],
+        )
+        self.assertEqual(
+            [item.tool for item in result.context.tool_results],
+            ["search_stub", "ast_stub", "dependency_stub"],
+        )
+
+    def test_tool_failure_is_preserved_in_workflow_trace(self):
+        registry = ToolRegistry()
+        registry.register(RecordingTool(
+            "search_stub",
+            "code_search",
+            [],
+            error=RuntimeError("search offline"),
+        ))
+
+        result = run_workflow(
+            "question",
+            object(),
+            [],
+            tool_registry=registry,
+            analyzer_fn=lambda *args: self.fail("analysis must not run"),
+            llm_fn=lambda *args: self.fail("LLM must not run"),
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.tool, "search_stub")
+        self.assertEqual(result.error.message, "search offline")
+        self.assertEqual(
+            result.context.steps[-1].output["tool_result"]["error"],
+            {"error_type": "RuntimeError", "message": "search offline"},
         )
 
 
