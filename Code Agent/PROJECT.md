@@ -270,9 +270,9 @@ tools/
 
 ## Phase 5：领域扩展能力设计与验证
 
-- 状态：Todo
+- 状态：Done
 - 分支：`phase5-domain-extension`
-- Codex Chat：待创建
+- Codex Chat：Phase 5 专用 Chat
 - 前置条件：Phase 4 已完成并合并到 `master`
 
 ### 目标
@@ -289,18 +289,29 @@ tools/
 
 ### 验收标准
 
-- [ ] Problem、Knowledge Source、Tool Set 和 Analysis Result 具有统一接口。
-- [ ] 新领域可以通过注册知识源和工具接入。
-- [ ] 核心 Orchestrator 不需要为每个领域重写。
-- [ ] 三个场景均有固定样例和验证结果。
-- [ ] 最终输出包含证据、原因、建议和后续验证步骤。
-- [ ] Code Review 通过。
-- [ ] Test 验证通过。
+- [x] Problem、Knowledge Source、Tool Set 和 Analysis Result 具有统一接口。
+- [x] 新领域可以通过注册知识源和工具接入。
+- [x] 核心 Orchestrator 不需要为每个领域重写。
+- [x] 三个场景均有固定样例和验证结果。
+- [x] 最终输出包含证据、原因、建议和后续验证步骤。
+- [x] Code Review 通过。
+- [x] Test 验证通过。
+
+### Code Review 结果
+
+- Review 通过；修改严格限定在 Phase 5，领域工作流内核不包含特定场景判断，Phase 1–4 公开接口保持兼容。
+- Review 发现并修复四类问题：公开导出覆盖、问题载荷覆盖知识上下文、Prompt/LLM/Parser 返回类型边界，以及不可追溯证据未被拒绝。
+- 配置、日志样例和异常信息不包含密钥；知识源、工具、模型和解析异常均以结构化错误返回。
 
 ### 测试结果
 
-待执行。
+- 单元与 Mock 集成测试：67 项通过，0 项失败。
+- 三个固定场景验证：代码分析、测试问题分析、商业化 SE 问题分析均通过同一领域工作流。
+- 依赖检查：`pip check` 通过。
+- 编译检查：Agent、核心模块、领域模块、工具、Workflow、测试、评测入口和程序入口通过。
+- 格式检查：`git diff --check` 和 `git diff --cached --check` 通过。
+- 真实外部 API 链路：未执行；核心自动化测试使用 Mock LLM，不依赖外部 API。
 
 ### Commits
 
-待提交。
+- `d2b8f20` `feat(code-agent): add domain-extensible workflow`
