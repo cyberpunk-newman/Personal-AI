@@ -209,9 +209,9 @@ User Question
 
 ## Phase 4：增加 Tool Calling 能力
 
-- 状态：Todo
+- 状态：Done
 - 分支：`phase4-tool-calling`
-- Codex Chat：待创建
+- Codex Chat：Phase 4 专用 Chat
 - 前置条件：Phase 3 已完成并合并到 `master`
 
 ### 目标
@@ -240,21 +240,31 @@ tools/
 
 ### 验收标准
 
-- [ ] 所有工具实现统一接口。
-- [ ] Agent 不直接依赖具体工具实现。
-- [ ] Planner 任务类型能够映射到注册工具。
-- [ ] 工具失败不会无信息地中断整个 Workflow。
-- [ ] 每个工具具有独立测试。
-- [ ] Code Review 通过。
-- [ ] Test 验证通过。
+- [x] 所有工具实现统一接口。
+- [x] Agent 不直接依赖具体工具实现。
+- [x] Planner 任务类型能够映射到注册工具。
+- [x] 工具失败不会无信息地中断整个 Workflow。
+- [x] 每个工具具有独立测试。
+- [x] Code Review 通过。
+- [x] Test 验证通过。
+
+### Code Review 结果
+
+- Review 通过；修改严格限定在 Phase 4，未引入 Phase 5 领域扩展能力或不合理依赖。
+- Planner 不依赖具体工具，Orchestrator 通过统一协议和 Registry 调度工具。
+- Review 发现并修复两项问题：Dependency Tool 在任务计划中不可达，以及具体工具之间存在私有实现依赖。
 
 ### 测试结果
 
-待执行。
+- 单元与 Mock 集成测试：49 项通过，0 项失败。
+- 依赖检查：`pip check` 通过。
+- 编译检查：Planner、工具、核心模块、兼容模块、评测入口、测试和程序入口通过。
+- 格式检查：`git diff --check` 和 `git diff --cached --check` 通过。
+- 真实外部 API 链路：未执行；核心自动化测试使用 Mock，不依赖外部 API。
 
 ### Commits
 
-待提交。
+- `cd13975` `feat(code-agent): add tool calling workflow`
 
 ---
 
