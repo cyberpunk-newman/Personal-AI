@@ -146,9 +146,9 @@ User Question
 
 ## Phase 3：增加 Planner Agent
 
-- 状态：Todo
+- 状态：Done
 - 分支：`phase3-planner`
-- Codex Chat：待创建
+- Codex Chat：Phase 3 专用 Chat
 - 前置条件：Phase 2 已完成并合并到 `master`
 
 ### 目标
@@ -180,20 +180,30 @@ User Question
 
 ### 验收标准
 
-- [ ] Planner 与任务执行职责分离。
-- [ ] Planner 输出具有稳定、明确的数据结构。
-- [ ] 无效任务计划能够被校验和拒绝。
-- [ ] Orchestrator 能够消费任务计划。
-- [ ] Code Review 通过。
-- [ ] Test 验证通过。
+- [x] Planner 与任务执行职责分离。
+- [x] Planner 输出具有稳定、明确的数据结构。
+- [x] 无效任务计划能够被校验和拒绝。
+- [x] Orchestrator 能够消费任务计划。
+- [x] Code Review 通过。
+- [x] Test 验证通过。
+
+### Code Review 结果
+
+- Review 通过；修改严格限定在 Phase 3，未引入 Phase 4 工具能力或不合理依赖。
+- Planner 不依赖 Retriever、Analyzer 或 LLM，规划与执行职责保持分离。
+- Review 发现并修复两项轻微问题：无意义空行和 Prompt 兜底导致的兼容性差异。
 
 ### 测试结果
 
-待执行。
+- 单元与 Mock 集成测试：32 项通过，0 项失败。
+- 依赖检查：`pip check` 通过。
+- 编译检查：Planner、核心模块、兼容模块、评测入口、测试和程序入口通过。
+- 格式检查：`git diff --check` 通过。
+- 真实外部 API 链路：未执行；核心自动化测试使用 Mock，不依赖外部 API。
 
 ### Commits
 
-待提交。
+- `541f77c` `feat(code-agent): add planner workflow`
 
 ---
 
