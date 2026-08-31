@@ -9,9 +9,12 @@ from workflow.orchestrator import (
     WorkflowStep,
     run_workflow,
 )
+from workflow.domain_orchestrator import DomainOrchestrator, DomainWorkflowResult
 
 __all__ = [
     "AnalysisResult",
+    "DomainOrchestrator",
+    "DomainWorkflowResult",
     "Orchestrator",
     "StepStatus",
     "WorkflowContext",

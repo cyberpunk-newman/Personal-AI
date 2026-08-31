@@ -3,8 +3,10 @@ import unittest
 from tools.ast_tool import ASTTool
 from tools.base import BaseTool, ToolRequest
 from tools.code_search_tool import CodeSearchTool
+from tools.config_analysis_tool import ConfigAnalysisTool
 from tools.defaults import create_default_registry
 from tools.dependency_tool import DependencyTool
+from tools.log_parser_tool import LogParserTool
 from tools.registry import ToolRegistry
 
 
@@ -180,6 +182,56 @@ class DependencyToolTests(unittest.TestCase):
 
     def test_missing_source_returns_structured_failure(self):
         result = DependencyTool().run(request("dependency_analysis"))
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.error_type, "ValueError")
+
+
+class LogParserToolTests(unittest.TestCase):
+    def test_extracts_error_signatures_and_stack_frames(self):
+        result = LogParserTool().run(request(
+            "log_analysis",
+            {"contexts": [{
+                "content": "RetryError at CheckoutController.submit",
+            }]},
+        ))
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.output["error_signatures"], ["RetryError"])
+        self.assertEqual(result.output["stack_frames"], ["CheckoutController.submit"])
+
+    def test_invalid_context_returns_structured_failure(self):
+        result = LogParserTool().run(request(
+            "log_analysis",
+            {"contexts": ["invalid"]},
+        ))
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.error_type, "ValueError")
+
+
+class ConfigAnalysisToolTests(unittest.TestCase):
+    def test_reports_observed_and_expected_mismatches(self):
+        result = ConfigAnalysisTool().run(request(
+            "configuration_analysis",
+            {
+                "observed_config": {"tracking": False, "version": "4.1"},
+                "expected_config": {"tracking": True, "version": "4.2"},
+            },
+        ))
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.output["mismatch_count"], 2)
+        self.assertEqual(
+            {item["key"] for item in result.output["mismatches"]},
+            {"tracking", "version"},
+        )
+
+    def test_invalid_config_returns_structured_failure(self):
+        result = ConfigAnalysisTool().run(request(
+            "configuration_analysis",
+            {"observed_config": None},
+        ))
 
         self.assertFalse(result.success)
         self.assertEqual(result.error.error_type, "ValueError")

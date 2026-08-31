@@ -2,6 +2,17 @@ import unittest
 
 
 class CompatibilityTests(unittest.TestCase):
+    def test_workflow_keeps_legacy_and_domain_exports(self):
+        import workflow
+
+        self.assertTrue({
+            "AnalysisResult",
+            "Orchestrator",
+            "run_workflow",
+            "DomainOrchestrator",
+            "DomainWorkflowResult",
+        }.issubset(set(workflow.__all__)))
+
     def test_legacy_imports_resolve_to_new_modules(self):
         from agent.ast_parser import extract_functions
         from agent.llm import ask_llm
