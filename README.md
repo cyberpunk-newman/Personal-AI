@@ -13,7 +13,7 @@
 ## 项目结构
 
 ```text
-Code Agent/
+Personal-AI/
 ├── main.py                 # 命令行入口
 ├── core/                   # 配置与 LLM 客户端
 ├── agents/                 # Planner

@@ -55,7 +55,7 @@ Phase 开发
 ### 目标结构
 
 ```text
-Code Agent/
+Personal-AI/
 ├── main.py
 ├── core/
 │   ├── config.py

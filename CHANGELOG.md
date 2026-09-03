@@ -7,7 +7,7 @@ Code Agent 是一个基于 RAG（检索增强生成）的代码分析工具，�
 ## 项目结构
 
 ```
-Code Agent/
+Personal-AI/
 ├── main.py                # 主入口，CLI 交互界面
 ├── app.py                 # 旧入口兼容层
 ├── config.py              # 旧配置导入兼容层
